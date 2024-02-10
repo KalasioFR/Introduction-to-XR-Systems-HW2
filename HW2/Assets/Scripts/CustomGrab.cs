@@ -11,11 +11,19 @@ public class CustomGrab : MonoBehaviour
     public List<Transform> nearObjects = new List<Transform>();
     public Transform grabbedObject = null;
     public InputActionReference action;
+    public InputActionReference doubleRotationAction;
     bool grabbing = false;
+
+    private Vector3 previousPosition;
+    private Quaternion previousRotation;
+
+    // Additional feature to double the rotation
+    private bool doubleRotation = false;
 
     private void Start()
     {
         action.action.Enable();
+        doubleRotationAction.action.Enable();
 
         // Find the other hand
         foreach(CustomGrab c in transform.parent.GetComponentsInChildren<CustomGrab>())
@@ -28,6 +36,7 @@ public class CustomGrab : MonoBehaviour
     void Update()
     {
         grabbing = action.action.IsPressed();
+        doubleRotation = doubleRotationAction.action.IsPressed();
         if (grabbing)
         {
             // Grab nearby object or the object in the other hand
@@ -36,10 +45,29 @@ public class CustomGrab : MonoBehaviour
 
             if (grabbedObject)
             {
-                // Change these to add the delta position and rotation instead
-                // Save the position and rotation at the end of Update function, so you can compare previous pos/rot to current here
-                grabbedObject.position = transform.position;
-                grabbedObject.rotation = transform.rotation;
+                // Calculate delta position and rotation
+                Vector3 deltaPosition = transform.position - previousPosition;
+                Quaternion deltaRotation = transform.rotation * Quaternion.Inverse(previousRotation);
+
+                // Apply delta position and rotation to the grabbed object
+                grabbedObject.position += deltaPosition;
+
+                // Calculate new rotation for the grabbed object
+                Quaternion newRotation = deltaRotation * grabbedObject.rotation;
+                grabbedObject.rotation = newRotation;
+
+                // Double the rotation if enabled
+                if (doubleRotation)
+                {
+                    Vector3 rotationAxis;
+                    float rotationAngle;
+                    deltaRotation.ToAngleAxis(out rotationAngle, out rotationAxis);
+                    grabbedObject.rotation = Quaternion.AngleAxis(rotationAngle * 2f, rotationAxis) * grabbedObject.rotation;
+                }
+
+                // Update previous position and rotation
+                previousPosition = transform.position;
+                previousRotation = transform.rotation;
             }
         }
         // If let go of button, release object
@@ -47,25 +75,27 @@ public class CustomGrab : MonoBehaviour
             grabbedObject = null;
 
         // Should save the current position and rotation here
+        previousPosition = transform.position;
+        previousRotation = transform.rotation;
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        // Make sure to tag grabbable objects with the "grabbable" tag
-        // You also need to make sure to have colliders for the grabbable objects and the controllers
-        // Make sure to set the controller colliders as triggers or they will get misplaced
-        // You also need to add Rigidbody to the controllers for these functions to be triggered
-        // Make sure gravity is disabled though, or your controllers will (virtually) fall to the ground
+        private void OnTriggerEnter(Collider other)
+        {
+            // Make sure to tag grabbable objects with the "grabbable" tag
+            // You also need to make sure to have colliders for the grabbable objects and the controllers
+            // Make sure to set the controller colliders as triggers or they will get misplaced
+            // You also need to add Rigidbody to the controllers for these functions to be triggered
+            // Make sure gravity is disabled though, or your controllers will (virtually) fall to the ground
 
-        Transform t = other.transform;
-        if(t && t.tag.ToLower()=="grabbable")
-            nearObjects.Add(t);
-    }
+            Transform t = other.transform;
+            if(t && t.tag.ToLower()=="grabbable")
+                nearObjects.Add(t);
+        }
 
-    private void OnTriggerExit(Collider other)
-    {
-        Transform t = other.transform;
-        if( t && t.tag.ToLower()=="grabbable")
-            nearObjects.Remove(t);
-    }
+        private void OnTriggerExit(Collider other)
+        {
+            Transform t = other.transform;
+            if( t && t.tag.ToLower()=="grabbable")
+                nearObjects.Remove(t);
+        }
 }
