@@ -2,24 +2,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MagnifyingGlass : MonoBehaviour
+public class SeeThrough : MonoBehaviour
 {
-    public Transform playerTarget;
-    public Transform magnifyingGlass;
-    public Transform magnifiedObject;
+    public Transform mainCamera;
+    public Transform lens;
 
     void Update()
     {
-        // Calculate the local position of the player relative to the magnifying glass
-        Vector3 localPlayer = magnifyingGlass.InverseTransformPoint(playerTarget.position);
+        Vector3 localPlayer = lens.InverseTransformPoint(mainCamera.position);
+        transform.position = lens.position;
 
-        // Update the position of the magnified object relative to the lens of the magnifying glass
-        magnifiedObject.position = magnifyingGlass.TransformPoint(localPlayer);
-
-        // Calculate the point to make the magnified object look at
-        Vector3 lookAtPoint = magnifyingGlass.TransformPoint(-localPlayer);
-
-        // Rotate the magnified object to look at the calculated point
-        magnifiedObject.LookAt(lookAtPoint, magnifyingGlass.up);
+        Vector3 lookatmirror = lens.TransformPoint(new Vector3(-localPlayer.x, -localPlayer.y, -localPlayer.z));
+        transform.LookAt(lookatmirror, lens.up);
     }
 }
